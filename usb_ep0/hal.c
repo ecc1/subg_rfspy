@@ -1,5 +1,5 @@
 /*
- * CC Bootloader - Hardware Abstraction Layer 
+ * CC Bootloader - Hardware Abstraction Layer
  *
  * Fergus Noble (c) 2011
  *
@@ -35,18 +35,18 @@ void led_off() {
 
 void usb_up() {
   // Bring up the USB link
-#ifdef TI_DONGLE
-	P1DIR |= 1;
-	P1_0 = 1;
+#if TI_DONGLE || YARDSTICK1
+  P1DIR |= 1;
+  P1_0 = 1;
 #elif SRF_STICK
-	P2DIR |= 1;
-	P2_0 = 1;
+  P2DIR |= 1;
+  P2_0 = 1;
 #endif
 }
 
 void usb_down() {
   // Bring down the USB link
-#ifdef TI_DONGLE
+#if TI_DONGLE || YARDSTICK1
   P1_0 = 0;
   P1DIR &= ~1;
 #elif SRF_STICK

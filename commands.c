@@ -221,6 +221,7 @@ void cmd_update_register() {
   uint8_t addr;
   uint8_t value;
   uint8_t rval;
+  extern volatile uint8_t amplifier_mode;
   addr = serial_rx_byte();
   value = serial_rx_byte();
   rval = 1;
@@ -326,6 +327,9 @@ void cmd_update_register() {
       break;
     case 0x21:
       PA_TABLE0 = value;
+      break;
+    case 0x22:
+      amplifier_mode = (value != 0);
       break;
     default:
       rval = 2;

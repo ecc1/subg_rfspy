@@ -14,6 +14,7 @@ volatile uint8_t __xdata radio_rx_buf[MAX_PACKET_LEN];
 volatile uint8_t radio_rx_buf_len = 0;
 volatile uint8_t packet_count = 1;
 volatile uint8_t underflow_count = 0;
+volatile uint8_t amplifier_mode = 0;
 
 void configure_radio()
 {
@@ -54,6 +55,8 @@ void configure_radio()
   AGCCTRL2 = 0x07; // 0x03 to 0x07 - default: 0x03
   AGCCTRL1 = 0x00; // 0x00         - default: 0x40
   AGCCTRL0 = 0x91; // 0x91 or 0x92 - default: 0x91
+
+  SET_AMP_OFF;
 
 #if US_RADIO_LOCALE
   FREQ2     = 0x26; // 916.541MHz is midpoint between freq of pump in free space,
@@ -96,7 +99,7 @@ void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
       // Overflow
     }
     if (d_byte == 0) {
-      RFST = RFST_SIDLE;
+      SET_RFST_SIDLE;
       while(MARCSTATE!=MARC_STATE_IDLE);
     }
   }
@@ -110,7 +113,7 @@ void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
       // We wait a few counts to make sure the radio has sent the last bytes
       // before turning it off.
       if (underflow_count == 2) {
-        RFST = RFST_SIDLE;
+        SET_RFST_SIDLE;
       }
     }
   }
@@ -121,7 +124,7 @@ void rf_isr(void) __interrupt RF_VECTOR {
   if(RFIF & 0x80) // TX underflow
   {
     // Underflow
-    RFST = RFST_SIDLE;
+    SET_RFST_SIDLE;
     RFIF &= ~0x80; // Clear module interrupt flag
   }
   else if(RFIF & 0x40) // RX overflow
@@ -143,7 +146,7 @@ void send_packet_from_serial(uint8_t channel, uint8_t repeat_count, uint8_t dela
   radio_tx_buf_idx = 0;
   underflow_count = 0;
 
-  RFST = RFST_SIDLE;
+  SET_RFST_SIDLE;
   while(MARCSTATE!=MARC_STATE_IDLE);
 
   CHANNR = channel;
@@ -161,7 +164,7 @@ void send_packet_from_serial(uint8_t channel, uint8_t repeat_count, uint8_t dela
 
     if (radio_tx_buf_len == 2) { 
       // Turn on radio
-      RFST = RFST_STX;
+      SET_RFST_STX;
     }
   }
 
@@ -179,7 +182,7 @@ void send_packet_from_serial(uint8_t channel, uint8_t repeat_count, uint8_t dela
     }
     
     // Turn on radio (interrupts should start again)
-    RFST = RFST_STX;
+    SET_RFST_STX;
     while(MARCSTATE!=MARC_STATE_TX);
 
     // wait for sending to finish
@@ -191,7 +194,7 @@ void send_packet_from_serial(uint8_t channel, uint8_t repeat_count, uint8_t dela
 
 void resend_from_tx_buf(uint8_t channel) {
 
-  RFST = RFST_SIDLE;
+  SET_RFST_SIDLE;
   while(MARCSTATE!=MARC_STATE_IDLE);
 
   CHANNR = channel;
@@ -201,7 +204,7 @@ void resend_from_tx_buf(uint8_t channel) {
   underflow_count = 0;
 
   // Turn on radio (interrupts should start again)
-  RFST = RFST_STX;
+  SET_RFST_STX;
   while(MARCSTATE!=MARC_STATE_TX);
 
   // wait for sending to finish
@@ -216,14 +219,14 @@ uint8_t get_packet_and_write_to_serial(uint8_t channel, uint32_t timeout_ms) {
 
   reset_timer();
 
-  RFST = RFST_SIDLE;
+  SET_RFST_SIDLE;
   while(MARCSTATE!=MARC_STATE_IDLE);
 
   CHANNR = channel;
 
   radio_rx_buf_len = 0;
 
-  RFST = RFST_SRX;
+  SET_RFST_SRX;
   while(MARCSTATE!=MARC_STATE_RX);
 
   while(1) {
@@ -261,7 +264,7 @@ uint8_t get_packet_and_write_to_serial(uint8_t channel, uint32_t timeout_ms) {
       break;
     }
   }
-  RFST = RFST_SIDLE;
+  SET_RFST_SIDLE;
   //led_set_state(0,0);
   return rval;
 }
