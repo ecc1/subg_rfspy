@@ -35,4 +35,24 @@ make -f Makefile.usb_ep0 CODE_LOC=0x1400 CODE_LOC_NAME=CCBOOTLOADER
 make -f Makefile.usb_ep0 RADIO_LOCALE=WW
 make -f Makefile.usb_ep0 RADIO_LOCALE=WW CODE_LOC=0x1400 CODE_LOC_NAME=CCBOOTLOADER
 
+############################################################################
+# SRF stick
+############################################################################
+# USA:
+make -f Makefile.srfstick
+make -f Makefile.srfstick CODE_LOC=0x1400 CODE_LOC_NAME=CCBOOTLOADER
+# Worldwide:
+make -f Makefile.srfstick RADIO_LOCALE=WW
+make -f Makefile.srfstick RADIO_LOCALE=WW CODE_LOC=0x1400 CODE_LOC_NAME=CCBOOTLOADER
+
+############################################################################
+# Yardstick One
+############################################################################
+# USA:
+make -f Makefile.ys1
+make -f Makefile.ys1 CODE_LOC=0x1400 CODE_LOC_NAME=CCBOOTLOADER
+# Worldwide:
+make -f Makefile.ys1 RADIO_LOCALE=WW
+make -f Makefile.ys1 RADIO_LOCALE=WW CODE_LOC=0x1400 CODE_LOC_NAME=CCBOOTLOADER
+
 exit 0
