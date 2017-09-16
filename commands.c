@@ -10,17 +10,34 @@ uint8_t interrupting_cmd = 0;
 typedef void (*CommandHandler)();
 
 CommandHandler handlers[] = {
-  /* 0 */ 0,
-  /* 1 */ cmd_get_state,
-  /* 2 */ cmd_get_version,
-  /* 3 */ cmd_get_packet,
-  /* 4 */ cmd_send_packet,
-  /* 5 */ cmd_send_and_listen,
-  /* 6 */ cmd_update_register,
-  /* 7 */ cmd_reset,
-  /* 8 */ cmd_led,
-  /* 9 */ cmd_read_register
+  /* 0  */ 0,
+  /* 1  */ cmd_get_state,
+  /* 2  */ cmd_get_version,
+  /* 3  */ cmd_get_packet,
+  /* 4  */ cmd_old_send_packet,
+  /* 5  */ cmd_send_and_listen,
+  /* 6  */ cmd_update_register,
+  /* 7  */ cmd_reset,
+  /* 8  */ cmd_led,
+  /* 9  */ cmd_read_register,
+  /* 10 */ cmd_send_packet
 };
+
+void do_cmd(uint8_t cmd) {
+  if (cmd > 0 && cmd < sizeof(handlers)/sizeof(handlers[0])) {
+    handlers[cmd]();
+  }
+}
+
+void get_command() {
+  uint8_t cmd;
+  cmd = serial_rx_byte();
+  do_cmd(cmd);
+  if (interrupting_cmd) {
+    do_cmd(interrupting_cmd);
+    interrupting_cmd = 0;
+  }
+}
 
 void cmd_get_packet() {
   uint8_t channel;
@@ -40,33 +57,31 @@ void cmd_get_state() {
 }
 
 void cmd_get_version() {
-  serial_tx_str("subg_rfspy 1.0");
+  serial_tx_str("subg_rfspy 1.1");
 }
 
-void do_cmd(uint8_t cmd) {
-  if (cmd > 0 && cmd < sizeof(handlers)/sizeof(handlers[0])) {
-    handlers[cmd]();
-  }
-}
-
-void get_command() {
-  uint8_t cmd;
-  cmd = serial_rx_byte();
-  do_cmd(cmd);
-  if (interrupting_cmd) {
-    do_cmd(interrupting_cmd);
-    interrupting_cmd = 0;
-  }
-}
-
-void cmd_send_packet() {
+// Deprecated. Relied on 0 byte to end packet
+void cmd_old_send_packet() {
   uint8_t channel;
   uint8_t repeat_count;
   uint8_t delay_ms;
   channel = serial_rx_byte();
   repeat_count = serial_rx_byte();
   delay_ms = serial_rx_byte();
-  send_packet_from_serial(channel, repeat_count, delay_ms);
+  send_packet_from_serial(channel, repeat_count, delay_ms, 0);
+  serial_tx_byte(0);
+}
+
+void cmd_send_packet() {
+  uint8_t channel;
+  uint8_t repeat_count;
+  uint8_t delay_ms;
+  uint8_t len;
+  channel = serial_rx_byte();
+  repeat_count = serial_rx_byte();
+  delay_ms = serial_rx_byte();
+  len = serial_rx_byte();
+  send_packet_from_serial(channel, repeat_count, delay_ms, len);
   serial_tx_byte(0);
 }
 
@@ -87,7 +102,7 @@ void cmd_send_and_listen() {
   timeout_ms = serial_rx_long();
   retry_count = serial_rx_byte();
 
-  send_packet_from_serial(send_channel, repeat_count, delay_ms);
+  send_packet_from_serial(send_channel, repeat_count, delay_ms, 0);
   result = get_packet_and_write_to_serial(listen_channel, timeout_ms);
 
   while (result == ERROR_RX_TIMEOUT && retry_count > 0) {
@@ -343,6 +358,6 @@ void cmd_led() {
   uint8_t led;
   uint8_t mode;
   led = serial_rx_byte();
-  mode = serial_rx_byte(); 
+  mode = serial_rx_byte();
   led_set_mode(led, mode);//0, 1, 2 = Off, On, Auto
 }

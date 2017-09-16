@@ -78,11 +78,11 @@ void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
   if (MARCSTATE==MARC_STATE_RX) {
     d_byte = RFD;
     if (radio_rx_buf_len == 0) {
-      radio_rx_buf[0] = RSSI; 
+      radio_rx_buf[0] = RSSI;
       if (radio_rx_buf[0] == 0) {
         radio_rx_buf[0] = 1; // Prevent RSSI of 0 from triggering end-of-packet
       }
-      radio_rx_buf[1] = packet_count; 
+      radio_rx_buf[1] = packet_count;
       packet_count++;
       radio_rx_buf_len = 2;
     }
@@ -136,9 +136,9 @@ void rf_isr(void) __interrupt RF_VECTOR {
 
 }
 
-void send_packet_from_serial(uint8_t channel, uint8_t repeat_count, uint8_t delay_ms) {
+void send_packet_from_serial(uint8_t channel, uint8_t repeat_count, uint8_t delay_ms, uint8_t len) {
   uint8_t s_byte;
-  
+
   radio_tx_buf_len = 0;
   radio_tx_buf_idx = 0;
   underflow_count = 0;
@@ -155,11 +155,17 @@ void send_packet_from_serial(uint8_t channel, uint8_t repeat_count, uint8_t dela
       s_byte = 0;
     }
     radio_tx_buf[radio_tx_buf_len++] = s_byte;
-    if (s_byte == 0) {
-      break;
+    if (len == 0) {
+      if (s_byte == 0) {
+        break;
+      }
+    } else {
+      if (radio_tx_buf_len > len) {
+        break;
+      }
     }
 
-    if (radio_tx_buf_len == 2) { 
+    if (radio_tx_buf_len == 2) {
       // Turn on radio
       RFST = RFST_STX;
     }
@@ -173,11 +179,11 @@ void send_packet_from_serial(uint8_t channel, uint8_t repeat_count, uint8_t dela
     radio_tx_buf_idx = 0;
     underflow_count = 0;
 
-    // delay 
+    // delay
     if (delay_ms > 0) {
       delay(delay_ms);
     }
-    
+
     // Turn on radio (interrupts should start again)
     RFST = RFST_STX;
     while(MARCSTATE!=MARC_STATE_TX);
@@ -248,7 +254,7 @@ uint8_t get_packet_and_write_to_serial(uint8_t channel, uint32_t timeout_ms) {
       rval = ERROR_RX_TIMEOUT;
       break;
     }
-  
+
     #ifndef TI_DONGLE
     #else
     #endif
@@ -265,4 +271,3 @@ uint8_t get_packet_and_write_to_serial(uint8_t channel, uint32_t timeout_ms) {
   //led_set_state(0,0);
   return rval;
 }
-
